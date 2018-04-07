@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">RXPhoto</string>
+    <string name="get_image">Получить картинку</string>
+    <string name="convert_image">Преобразовать картинку</string>
+</resources>
