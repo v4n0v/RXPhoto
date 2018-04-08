@@ -11,7 +11,6 @@ import com.example.avetc.rxphoto.model.ImageModel;
 import com.example.avetc.rxphoto.view.MainView;
 
 import io.reactivex.Scheduler;
-import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 
 @InjectViewState
@@ -25,40 +24,44 @@ public class MainPresenter extends MvpPresenter<MainView> {
     public MainPresenter(Scheduler scheduler, Context context) {
         this.scheduler = scheduler;
         this.context = context;
-        model = new ImageModel();
+        model = new ImageModel(context);
     }
 
+
     public void saveImage(Bitmap bitmap) {
-        model.saveImage(bitmap, context)
-                .subscribeOn(Schedulers.computation())
+        model.saveImage(bitmap, "super_image", Bitmap.CompressFormat.JPEG)
+                .subscribeOn(Schedulers.newThread())
                 .observeOn(scheduler)
                 .subscribe(boo -> {
-                    getViewState().toast("SAVING PICTURE");
-                    Log.d(TAG, "saveImage accept in " + Thread.currentThread().getName());
+                     getViewState().toast("SAVED");
+                     Log.d(TAG, "saveImage accept in " + Thread.currentThread().getName());
                 });
     }
 
     public void convertImage(Bitmap bitmap) {
-        model.convertImage(bitmap, context)
+        model.convertImage(bitmap, "super_image", Bitmap.CompressFormat.PNG)
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(scheduler)
-                .subscribe(boo ->
-                {
-                    getViewState().toast("CONVERTING");
-                    getViewState().setVisible(MainView.GET);
+                .subscribe(boo -> {
+                    getViewState().toast("CONVERTED");
+                    getViewState().setVisible(MainView.LOAD);
                     Log.d(TAG, "convertImage accept in  " + Thread.currentThread().getName());
                 });
     }
 
     public void loadImage(Uri selectedImage) {
-        model.loadImage(context, selectedImage)
+        model.loadImage(selectedImage)
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(scheduler)
                 .subscribe((Bitmap bitmap) -> {
-                    getViewState().toast("LOADING");
-                    getViewState().setVisible(MainView.CONVERT);
-                    getViewState().setImage(bitmap);
-                    Log.d(TAG, "loadImage accept in  " + Thread.currentThread().getName());
+                    if (bitmap != null) {
+                        getViewState().toast("LOADED");
+                        getViewState().setVisible(MainView.CONVERT);
+                        getViewState().setImage(bitmap);
+                        Log.d(TAG, "loadImage accept in  " + Thread.currentThread().getName());
+                    }
                 });
     }
+
+
 }

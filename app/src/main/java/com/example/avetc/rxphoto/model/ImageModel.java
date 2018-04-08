@@ -3,43 +3,75 @@ package com.example.avetc.rxphoto.model;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
-import com.example.avetc.rxphoto.utils.FileManager;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import io.reactivex.Observable;
 import io.reactivex.Single;
 
 
 public class ImageModel {
+    private static final int QUALITY = 85;
     private final String TAG = "ImageModel";
 
-    public Single<Boolean> saveImage(Bitmap bitmap, Context context) {
-
-        return Single.fromCallable(() ->
-        {
-            // проверяю есть ли картинка в памяти устройства
-            Bitmap img = FileManager.loadBitmap(context, "super_image");
-            if (img!=null) {
-                // если нет, сохраняю в память, если есть использхую имеющуюся
-                FileManager.deleteBitmap(context, "super_image");
-            }
-            FileManager.saveBitmap(bitmap, context, "super_image", Bitmap.CompressFormat.JPEG);
-            Log.d(TAG, "Сохраняю в галлерею  ( " + Thread.currentThread().getName()+")");
-            return true;
-        });
-    }
-
-    public  Single<Boolean> convertImage(Bitmap bitmap, Context context){
-        return Single.fromCallable(() ->
-        {
-            FileManager.saveBitmap(bitmap, context, "super_image", Bitmap.CompressFormat.PNG);
-            Log.d(TAG, "Сконвертировано в галлерею  ( " + Thread.currentThread().getName()+")");
-            return true;
-        });
+    private Context context;
+    public ImageModel(Context context) {
+        this.context = context;
     }
 
 
-    public Single<Bitmap> loadImage(Context context, Uri selectedImage) {
-        Log.d(TAG, "Загружаю из галлереи (" + Thread.currentThread().getName()+")");
-        return Single.fromCallable(()-> MediaStore.Images.Media.getBitmap(context.getContentResolver(), selectedImage));
+    public Single<Boolean> saveImage(Bitmap bitmap,String name, Bitmap.CompressFormat format) {
+        return Single.fromCallable(() -> save(bitmap, name, format));
     }
+
+    public Observable<Bitmap> loadImage(Uri path) {
+        return Observable.fromCallable(() -> load(path));
+    }
+
+    public Single<Boolean> convertImage(Bitmap bitmap, String name, Bitmap.CompressFormat format) {
+        return Single.fromCallable(() -> save(bitmap, name, format));
+    }
+
+    private  Bitmap load(Uri path) {
+        Log.e(TAG, "load: " + path + "\nin: " + Thread.currentThread().getName());
+        //создаем файл
+        Bitmap bitmap = null;
+        try {
+            bitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(), path);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return bitmap;
+    }
+
+
+    private boolean save(Bitmap bitmap, String name, Bitmap.CompressFormat format) {
+        File file = new File(context.getApplicationContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES), name + "." + format.name());
+        Log.d(TAG, "save: file= '" + file + "'");
+
+        try {
+            FileOutputStream out = new FileOutputStream(file);
+            bitmap.compress(format, QUALITY, out);
+            out.flush();
+            out.close();
+            Log.e(TAG, "saveBitmap: " + file.getName() + " in " + Thread.currentThread().getName());
+            // регистрация в фотоальбоме
+            MediaStore.Images.Media.insertImage(context.getContentResolver(), bitmap, file.getName(), file.getName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return true;
+    }
+
+    private boolean convert(Bitmap bitmap, String name, Bitmap.CompressFormat format) {
+        return true;
+    }
+
+
+
 }

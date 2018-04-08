@@ -8,8 +8,9 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.MediaStore;
+import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -22,15 +23,17 @@ import com.example.avetc.rxphoto.presenter.MainPresenter;
 import com.example.avetc.rxphoto.view.MainView;
 import com.jakewharton.rxbinding2.view.RxView;
 
-import java.io.IOException;
-
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import io.reactivex.Completable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.observers.DisposableCompletableObserver;
 
 public class MainActivity extends MvpAppCompatActivity implements MainView {
     public static final int NUMBER_OF_REQUEST = 23401;
     static final int GALLERY_REQUEST = 1;
+    private static final String TAG = "ImageActivity";
     @BindView(R.id.convert_button)
     Button convertButton;
 
@@ -62,14 +65,14 @@ public class MainActivity extends MvpAppCompatActivity implements MainView {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             int canRead = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
             int canWrite = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-
             if (canRead != PackageManager.PERMISSION_GRANTED || canWrite != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
                         Manifest.permission.READ_EXTERNAL_STORAGE}, NUMBER_OF_REQUEST);
             }
         }
 
-        // сохраняю картинку в галрею, чтоб была наверняка
+
+        // сохраняю картинку в галерею, чтоб была наверняка
         presenter.saveImage(bitmap);
 
         // загрузка картинки из галереи
@@ -91,6 +94,7 @@ public class MainActivity extends MvpAppCompatActivity implements MainView {
                 });
     }
 
+    // обработака выбора изображения из галереи
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -99,23 +103,26 @@ public class MainActivity extends MvpAppCompatActivity implements MainView {
             case GALLERY_REQUEST:
                 if (resultCode == RESULT_OK) {
                     Uri selectedImage = data.getData();
+                    Log.d(TAG, "URI = " +selectedImage);
                     presenter.loadImage(selectedImage);
                 }
         }
     }
 
+    // вывод тоста
     @Override
     public void toast(String msg) {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
+    // определяю видимость кнопок
     @Override
     public void setVisible(int mode) {
         switch (mode) {
             case CONVERT:
                 convertButton.setVisibility(View.VISIBLE);
                 break;
-            case GET:
+            case LOAD:
                 convertButton.setVisibility(View.INVISIBLE);
                 imageView.setVisibility(View.INVISIBLE);
                 break;
@@ -124,7 +131,6 @@ public class MainActivity extends MvpAppCompatActivity implements MainView {
 
     @Override
     public void setImage(Bitmap bitmap) {
-
         imageView.setImageBitmap(bitmap);
         loadedBitmap=bitmap;
     }
