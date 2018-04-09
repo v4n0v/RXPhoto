@@ -10,8 +10,20 @@ import com.arellomobile.mvp.MvpPresenter;
 import com.example.avetc.rxphoto.model.ImageModel;
 import com.example.avetc.rxphoto.view.MainView;
 
+import java.util.concurrent.Callable;
+
+import io.reactivex.Completable;
+import io.reactivex.CompletableEmitter;
+import io.reactivex.CompletableObserver;
+import io.reactivex.CompletableOnSubscribe;
 import io.reactivex.Scheduler;
+import io.reactivex.annotations.NonNull;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Action;
+import io.reactivex.observers.DisposableCompletableObserver;
 import io.reactivex.schedulers.Schedulers;
+
+import static java.lang.Thread.sleep;
 
 @InjectViewState
 public class MainPresenter extends MvpPresenter<MainView> {
@@ -33,20 +45,37 @@ public class MainPresenter extends MvpPresenter<MainView> {
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(scheduler)
                 .subscribe(boo -> {
-                     getViewState().toast("SAVED");
-                     Log.d(TAG, "saveImage accept in " + Thread.currentThread().getName());
+                    getViewState().toast("SAVED");
+                    Log.d(TAG, "saveImage accept in " + Thread.currentThread().getName());
                 });
     }
 
     public void convertImage(Bitmap bitmap) {
-        model.convertImage(bitmap, "super_image", Bitmap.CompressFormat.PNG)
+        model.convertImage1(bitmap, "super_image", Bitmap.CompressFormat.PNG)
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(scheduler)
-                .subscribe(boo -> {
-                    getViewState().toast("CONVERTED");
-                    getViewState().setVisible(MainView.LOAD);
-                    Log.d(TAG, "convertImage accept in  " + Thread.currentThread().getName());
-                });
+                .subscribe(new CompletableObserver() {
+                               @Override
+                               public void onSubscribe(Disposable d) {
+                                   getViewState().openWaitingDialog();
+                                   Log.d(TAG, "onSubscribe");
+                               }
+
+                               @Override
+                               public void onComplete() {
+                                   Log.d(TAG, "onComplete");
+                                   getViewState().closeWaitingDialog();
+                                   getViewState().toast("CONVERSION COMPLETE");
+                               }
+
+                               @Override
+                               public void onError(Throwable e) {
+                                   Log.d(TAG, "onError "+e.getMessage());
+                                   getViewState().closeWaitingDialog();
+                                   getViewState().toast("CONVERSION ERROR");
+                               }
+                           }
+                );
     }
 
     public void loadImage(Uri selectedImage) {
@@ -64,4 +93,7 @@ public class MainPresenter extends MvpPresenter<MainView> {
     }
 
 
+    public void cancelConvertation() {
+        model.cancel();
+    }
 }

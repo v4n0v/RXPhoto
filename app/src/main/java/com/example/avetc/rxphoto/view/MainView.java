@@ -14,6 +14,10 @@ public interface MainView extends MvpView {
     int LOAD = 0;
     int CONVERT = 1;
 
+    void openWaitingDialog();
+
+    void closeWaitingDialog();
+
     @IntDef({LOAD, CONVERT})
     @Retention(RetentionPolicy.SOURCE)
 
